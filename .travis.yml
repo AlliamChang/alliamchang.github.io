@@ -1,0 +1,29 @@
+sudo: required
+language: node_js
+node_js:
+  - 10
+cache: npm
+branches:
+  only:
+    - blog # build blog branch only
+
+#before_script:
+#  - sudo cp ./blog/* ./source/_posts/
+script:
+  - hexo generate # generate static files
+
+deploy:
+  provider: pages
+  skip-cleanup: true
+  github-token: $GH_TOKEN
+  keep-history: true
+  target_branch: master
+  on:
+    branch: blog
+  local-dir: public
+
+notifications:
+  email:
+    - aven_chang@qq.com
+  on_success: change
+  on_failure: always
