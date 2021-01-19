@@ -6,5 +6,5 @@ wget --no-check-certificate https://raw.githubusercontent.com/AlliamChang/alliam
 
 **创建新文章**
 ```shell
-./newpost.sh <文章名> 
+./newpost.sh <文章名>  
 ```
