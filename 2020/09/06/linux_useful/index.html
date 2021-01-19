@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/batman-32x32.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/batman-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/batman-16x16.png">
+  <link rel="mask-icon" href="/images/batman.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Monda:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yoursite.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","width":230,"display":"post","padding":24,"offset":14,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="本文涉及到vim\grep\cat\more\less\echo\sed\awk的入门用法。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="linux常用命令">
+<meta property="og:url" content="http://yoursite.com/2020/09/06/linux_useful/index.html">
+<meta property="og:site_name" content="AvenChang&#39;s Blog">
+<meta property="og:description" content="本文涉及到vim\grep\cat\more\less\echo\sed\awk的入门用法。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-09-06T03:50:57.000Z">
+<meta property="article:modified_time" content="2021-01-19T03:45:26.349Z">
+<meta property="article:author" content="AvenChang">
+<meta property="article:tag" content="linux">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://yoursite.com/2020/09/06/linux_useful/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>linux常用命令 | AvenChang's Blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">AvenChang's Blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Keep Learning</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/09/06/linux_useful/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="AvenChang">
+      <meta itemprop="description" content="走走写写">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="AvenChang's Blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          linux常用命令
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-09-06 11:50:57" itemprop="dateCreated datePublished" datetime="2020-09-06T11:50:57+08:00">2020-09-06</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-01-19 11:45:26" itemprop="dateModified" datetime="2021-01-19T11:45:26+08:00">2021-01-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">学习笔记</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>本文涉及到vim\grep\cat\more\less\echo\sed\awk的入门用法。</p>
+<a id="more"></a>
+<h2 id="vim："><a href="#vim：" class="headerlink" title="vim："></a>vim：</h2><p>vim test —–建立一个test文件。test文件可以是hello.py、hello.txt等。<br>touch test —–效果同vim test。<br>mkdir test —–建立一个test文件夹<br>open test —–打开test文件夹<br>rm test —– 删除test文件<br>rm -r test —–删除test文件夹<br>注意：vim test 命令后会进入vim编辑器，按键i,进入编辑模式，按键esc,退出编辑模式，键入:x,（注意是’:x’）保存编辑并退出。</p>
+<h2 id="grep"><a href="#grep" class="headerlink" title="grep:"></a>grep:</h2><p>文本搜索工具，可搭配正则表达式使用，全称Global Regular Expression Print，译为全局正则表达式版本。<br>grep的一般使用方法：grep+[options]+pattern+filename  ,其中pattern是要搜索的字符串或正则表达式。<br>options可选参数：<br>    -i ：忽略大小写<br>    -c ：打印匹配的行数<br>    -l ：从多个文件中查找包含匹配项<br>    -v ：查找不包含匹配项的行<br>    -n：打印包含匹配项的行和行标<br>正则表达式参数：<br>    \ 忽略正则表达式中特殊字符的原有含义<br>    ^ 匹配正则表达式的开始行<br>    $ 匹配正则表达式的结束行<br>    &lt; 从匹配正则表达式的行开始<br>    &gt;; 到匹配正则表达式的行结束<br>    [ ] 单个字符；如[A] 即A符合要求<br>    [ - ] 范围 ；如[A-Z]即A，B，C一直到Z都符合要求<br>    . 所有的单个字符<br>    * 所有字符，长度可以为0<br>其他：<br>明确要求搜索子目录(-r的意思是递归)：grep -r<br>    或忽略子目录：grep -d skip<br>注意：grep 是搜索文件内容的，不搜索文件名。<br>如果有很多 输出时，您可以通过管道将其转到’less’上阅读：<br>    $ grep magic /usr/src/Linux/Documentation/* | less</p>
+<p>常见的示例有：<br>grep Aug /var/log/messages 在文件 ‘/var/log/messages’中查找关键词”Aug”<br>    grep ^Aug /var/log/messages 在文件 ‘/var/log/messages’中查找以”Aug”开始的词汇<br>    grep [0-9] /var/log/messages 选择 ‘/var/log/messages’ 文件中所有包含数字的行<br>    grep Aug -R /var/log/* 在目录 ‘/var/log’ 及随后的目录中搜索字符串”Aug”</p>
+<p>在Linux系统中有三种命令可以用来查阅全部的文件，分别是cat、more和less命令。它们查阅文件的使用方法也比较简单都是 命令 文件名 ，但是三者又有着区别。<br>1.cat命令可以一次显示整个文件，如果文件比较大，使用不是很方便；<br>2.more命令可以让屏幕在显示满一屏幕时暂停，此时可按空格健继续显示下一个画面，或按Q键停止显示。<br>3.less命令也可以分页显示文件，和more命令的区别就在于它支持上下键卷动屏幕，当结束浏览时，只要在less命令的提示符”: “下按Q键即可。<br>另外，多数情况下more和less命令会配合管道符来分页输出需要在屏幕上显示的内容。</p>
+<h2 id="cat"><a href="#cat" class="headerlink" title="cat:"></a>cat:</h2><p>cat命令是linux下的一个文本输出命令，通常是用于观看某个文件的内容的；<br>    cat主要有三大功能：<br>    1.一次显示整个文件。<br>    cat   filename<br>    2.从键盘创建一个文件。<br>    cat  &gt;  filename<br>    只能创建新文件,不能编辑已有文件。编辑好后Ctrl+C退出编辑模式。<br>    3.将几个文件合并为一个文件。<br>    cat   file1   file2  &gt; file</p>
+<pre><code>cat具体命令格式为 : cat [-AbeEnstTuv] [--help] [--version] fileName
+
+
+参数：
+-n 或 -number 由 1 开始对所有输出的行数编号
+-b 或 -number-nonblank 和 -n 相似，只不过对于空白行不编号
+-s 或 -squeeze-blank 当遇到有连续两行以上的空白行，就代换为一行的空白行
+...</code></pre>
+<p>范例：<br>    cat -n linuxfile1 &gt; linuxfile2 把 linuxfile1 的档案内容加上行号后输入 linuxfile2 这个档案里<br>    cat -b linuxfile1 linuxfile2 &gt;&gt; linuxfile3 把 linuxfile1 和 linuxfile2 的档案内容加上行号(空白行不加)之后将内容附加到linuxfile3 里。<br>    范例：<br>    把 linuxfile1 的档案内容加上行号后输入 linuxfile2 这个档案里<br>    cat -n linuxfile1 &gt; linuxfile2<br>    把 linuxfile1 和 linuxfile2 的档案内容加上行号(空白行不加)之后将内容附加到 linuxfile3 里。<br>    cat -b linuxfile1 linuxfile2 &gt;&gt; linuxfile3<br>补充说明：</p>
+<p>cat   file1   file2  &gt; file表示将file1和file2的内容串接后输入到file文件中，如果已经存在，file文件被重写。<br>    cat   file1   file2  &gt;&gt;file表示将file1和file2的内容串接后输入到file文件中，如果已经存在，新内容追加在file文件原内容的后面。</p>
+<h2 id="more"><a href="#more" class="headerlink" title="more:"></a>more:</h2><p>more test.log —–将test.log文件内容显示满一屏幕时暂停，此时可按空格健继续显示下一个画面，或按Q键停止显示。<br>cat test.log | grep aug | more  —–将test.log文件筛选出含字符串aug的行以more的方式显示输出</p>
+<h2 id="less"><a href="#less" class="headerlink" title="less:"></a>less:</h2><p>less test.log —–将test.log文件分页显示，支持上下键卷动屏幕，当结束浏览时，只要在less命令的提示符”: “下按Q键即可。<br>cat test.log | grep aug | less  —–将test.log文件筛选出含字符串aug的行以less的方式显示输出</p>
+<h2 id="echo"><a href="#echo" class="headerlink" title="echo:"></a>echo:</h2><p>echo命令的功能是在显示器上显示一段文字，一般起到一个提示的作用。<br>    该命令的一般格式为： echo [-n ][-e] 字符串<br>其中选项n表示输出文字后不换行；字符串能加引号，也能不加引号。<br>    -e 若字符串中出现以下字符，则特别加以处理，而不会将它当成一般文字输出：<br>       \a 发出警告声；<br>       \b 删除前一个字符；<br>       \c 最后不加上换行符号；<br>       \f 换行但光标仍旧停留在原来的位置；<br>       \n 换行且光标移至行首；<br>       \r 光标移至行首，但不换行；<br>       \t 插入tab；<br>       \v 与\f相同；<br>       \ 插入\字符；<br>       \nnn 插入nnn（八进制）所代表的ASCII字符；</p>
+<p>echo示例：<br>    示例一 打印当前的PATH设置<br>    [root@jfht ~]# echo $PATH<br>    /usr/kerberos/sbin:/usr/kerberos/bin:/usr/apache/apache-ant-1.7.1/bin:/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/root/bin</p>
+<pre><code>示例二 打印当前的LANG设置
+[root@jfht ~]# echo $LANG 
+zh_CN.GB18030
+
+示例三 对输出信息进行转义，比如输出换行
+echo &quot;hello\nworld&quot; 
+hello\nworld
+
+echo -e &quot;hello\nworld&quot; 
+hello
+world
+
+echo hello; echo world 
+hello
+world</code></pre>
+<h2 id="sed："><a href="#sed：" class="headerlink" title="sed："></a>sed：</h2><ol>
+<li>sed替换的基本语法为:         sed ‘s/原字符串/替换字符串/‘    ————单引号里面,s表示替换,三根斜线中间是替换的样式,特殊字符需要使用反斜线”&quot;进行转义。</li>
+<li>单引号是没有办法用反斜线”&quot;转义的,这时候只要把命令中的单引号改为双引号就行了,格式如下：<h3 id="要处理的字符包含单引号"><a href="#要处理的字符包含单引号" class="headerlink" title="要处理的字符包含单引号"></a>要处理的字符包含单引号</h3>sed “s/原字符串包含’/替换字符串包含’/“ </li>
+<li>命令中的三根斜线分隔符可以换成别的符号,有时候替换目录字符串的时候有较多斜线，这个时候换成其它的分割符是较为方便,只需要紧跟s定义即可。<h3 id="将分隔符换成问号”-”"><a href="#将分隔符换成问号”-”" class="headerlink" title="将分隔符换成问号”?”:"></a>将分隔符换成问号”?”:</h3>sed ‘s?原字符串?替换字符串?’</li>
+<li>可以在末尾加g替换每一个匹配的关键字,否则只替换每行的第一个,例如:<h3 id="替换所有匹配关键字"><a href="#替换所有匹配关键字" class="headerlink" title="替换所有匹配关键字"></a>替换所有匹配关键字</h3>sed ‘s/原字符串/替换字符串/g’</li>
+<li>一些特殊字符的使用<br>　　“^”表示行首<br>　　“$”符号如果在引号中表示行尾，但是在引号外却表示末行(最后一行)<h3 id="注意这里的-“-amp-“-符号，如果没有-“-amp-”，就会直接将匹配到的字符串替换掉"><a href="#注意这里的-“-amp-“-符号，如果没有-“-amp-”，就会直接将匹配到的字符串替换掉" class="headerlink" title="注意这里的 “ &amp; “ 符号，如果没有 “&amp;”，就会直接将匹配到的字符串替换掉"></a>注意这里的 “ &amp; “ 符号，如果没有 “&amp;”，就会直接将匹配到的字符串替换掉</h3><pre><code>sed &#39;s/^/添加的头部&amp;/g&#39; 　　　　 #在所有行首添加
+sed &#39;s/$/&amp;添加的尾部/g&#39; 　　　　 #在所有行末添加
+sed &#39;2s/原字符串/替换字符串/g&#39;　 #替换第2行
+sed &#39;$s/原字符串/替换字符串/g&#39;   #替换最后一行
+sed &#39;2,5s/原字符串/替换字符串/g&#39; #替换2到5行
+sed &#39;2,$s/原字符串/替换字符串/g&#39; #替换2到最后一行</code></pre>
+</li>
+<li>批量替换字符串(mac如下)<br>sed -i ‘’ “s/查找字段/替换字段/g” <code>grep 查找字段 -rl 路径</code><br>sed -i ‘’ “s/oldstring/newstring/g” <code>grep oldstring -rl yourdir</code></li>
+<li>sed处理过的输出是直接输出到屏幕上的,使用参数”i”直接在文件中替换。<h3 id="替换文件中的所有匹配项"><a href="#替换文件中的所有匹配项" class="headerlink" title="替换文件中的所有匹配项"></a>替换文件中的所有匹配项</h3>sed -i ‘s/原字符串/替换字符串/g’ filename</li>
+<li>多个替换可以在同一条命令中执行,用分号”;”分隔，其格式为:<h3 id="同时执行两个替换规则"><a href="#同时执行两个替换规则" class="headerlink" title="同时执行两个替换规则"></a>同时执行两个替换规则</h3>sed ‘s/^/添加的头部&amp;/g；s/$/&amp;添加的尾部/g’</li>
+</ol>
+<h2 id="awk"><a href="#awk" class="headerlink" title="awk:"></a>awk:</h2><p>awk语言的最基本功能是在文件或者字符串中基于指定规则浏览和抽取信息。<br>通常，awk是以文件的一行为处理单位的。awk每接收文件的一行，然后执行相应的命令，来处理文本。<br>相对于grep的查找，awk强在对文本的分析处理。<br>使用方法</p>
+<p>awk ‘{pattern + action}’ {filenames}<br>pattern 表示 AWK 在数据中查找的内容，而 action 是在找到匹配内容时所执行的一系列命令。花括号（{}）不需要在程序中始终出现，但它们用于根据特定的模式对一系列指令进行分组。<br>调用awk</p>
+<p>命令行方式调用awk<br>awk [-F  field-separator]  ‘commands’  input-file(s)<br>其中，commands 是真正awk命令，[-F域分隔符]是可选的。 input-file(s) 是待处理的文件。<br>在awk中，文件的每一行中，由域分隔符分开的每一项称为一个域。通常，在不指名-F域分隔符的情况下，默认的域分隔符是空格。<br> 入门实例<br>假设last -n 5的输出如下</p>
+<figure class="highlight shell"><figcaption><span>script</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">[root@www ~]# last -n 5</span><br><span class="line">root     pts/1   192.168.1.100  Tue Feb 10 11:21   still logged in</span><br><span class="line">root     pts/1   192.168.1.100  Tue Feb 10 00:46 - 02:28  (01:41)</span><br><span class="line">root     pts/1   192.168.1.100  Mon Feb  9 11:41 - 18:30  (06:48)</span><br><span class="line">dmtsai   pts/1   192.168.1.100  Mon Feb  9 11:41 - 11:41  (00:00)</span><br><span class="line">root     tty1                   Fri Sep  5 14:09 - 14:10  (00:01)</span><br></pre></td></tr></table></figure>
+<p>如果只是显示最近登录的5个帐号</p>
+<figure class="highlight shell"><figcaption><span>script</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">last -n 5 | awk  <span class="string">&#x27;&#123;print $1&#125;&#x27;</span></span></span><br><span class="line"></span><br><span class="line">root</span><br><span class="line"></span><br><span class="line">root</span><br><span class="line"></span><br><span class="line">root</span><br><span class="line"></span><br><span class="line">dmtsai</span><br><span class="line"></span><br><span class="line">root</span><br></pre></td></tr></table></figure>
+<p>awk工作流程是这样的：读入有’\n’换行符分割的一条记录，然后将记录按指定的域分隔符划分域，填充域，$0则表示所有域,$1表示第一个域,$n表示第n个域。默认域分隔符是”空白键” 或 “[tab]键”,所以$1表示登录用户，$3表示登录用户ip,以此类推。</p>
+<p>如果只是显示/etc/passwd的账户</p>
+<figure class="highlight shell"><figcaption><span>script</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">cat /etc/passwd |awk  -F <span class="string">&#x27;:&#x27;</span>  <span class="string">&#x27;&#123;print $1&#125;&#x27;</span>  </span></span><br><span class="line">root</span><br><span class="line">daemon</span><br><span class="line">bin</span><br><span class="line">sys</span><br></pre></td></tr></table></figure>
+<p>这种是awk+action的示例，每行都会执行action{print $1}。<br>-F指定域分隔符为’:’。</p>
+<p>如果只是显示/etc/passwd的账户和账户对应的shell,而账户与shell之间以tab键分割</p>
+<figure class="highlight shell"><figcaption><span>script</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">cat /etc/passwd |awk  -F <span class="string">&#x27;:&#x27;</span>  <span class="string">&#x27;&#123;print $1&quot;\t&quot;$7&#125;&#x27;</span></span></span><br><span class="line">root    /bin/bash</span><br><span class="line">daemon  /bin/sh</span><br><span class="line">bin     /bin/sh</span><br><span class="line">sys     /bin/sh</span><br></pre></td></tr></table></figure>
+
+<p>如果只是显示/etc/passwd的账户和账户对应的shell,而账户与shell之间以逗号分割,而且在所有行添加列名name,shell,在最后一行添加”blue,/bin/nosh”。</p>
+<figure class="highlight shell"><figcaption><span>script</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">cat /etc/passwd |awk  -F &#x27;:&#x27;  &#x27;BEGIN &#123;print &quot;name,shell&quot;&#125;  &#123;print $1&quot;,&quot;$7&#125; END &#123;print &quot;blue,/bin/nosh&quot;&#125;&#x27;</span><br><span class="line">name,shell</span><br><span class="line">root,/bin/bash</span><br><span class="line">daemon,/bin/sh</span><br><span class="line">bin,/bin/sh</span><br><span class="line">sys,/bin/sh</span><br><span class="line">....</span><br><span class="line">blue,/bin/nosh</span><br></pre></td></tr></table></figure>
+<p>awk工作流程是这样的：先执行BEGIN，然后读取文件，读入有/n换行符分割的一条记录，然后将记录按指定的域分隔符划分域，填充域，$0则表示所有域,$1表示第一个域,$n表示第n个域,随后开始执行模式所对应的动作action。接着开始读入第二条记录······直到所有的记录都读完，最后执行END操作。</p>
+<p>搜索/etc/passwd有root关键字的所有行</p>
+<figure class="highlight shell"><figcaption><span>script</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">awk -F: <span class="string">&#x27;/root/&#x27;</span> /etc/passwd</span></span><br><span class="line">root:x:0:0:root:/root:/bin/bash</span><br></pre></td></tr></table></figure>
+<p>这种是pattern的使用示例，匹配了pattern(这里是root)的行才会执行action(没有指定action，默认输出每行的内容)。<br>搜索支持正则，例如找root开头的: awk -F: ‘/^root/‘ /etc/passwd</p>
+<p>搜索/etc/passwd有root关键字的所有行，并显示对应的shell</p>
+<figure class="highlight shell"><figcaption><span>script</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> awk -F: <span class="string">&#x27;/root/&#123;print $7&#125;&#x27;</span> /etc/passwd             </span></span><br><span class="line">/bin/bash</span><br></pre></td></tr></table></figure>
+<p>这里指定了action{print $7}</p>
+<p>模式可以是以下任意一个：</p>
+<ul>
+<li>/正则表达式/：使用通配符的扩展集。</li>
+<li>关系表达式：可以用下面运算符表中的关系运算符进行操作，可以是字符串或数字的比较，如$2&gt;%1选择第二个字段比第一个字段长的行。</li>
+<li>模式匹配表达式：用运算符<del>(匹配)和</del>!(不匹配)。</li>
+<li>模式，模式：指定一个行的范围。该语法不能包括BEGIN和END模式。</li>
+<li>BEGIN：让用户指定在第一条输入记录被处理之前所发生的动作，通常可在这里设置全局变量。</li>
+<li>END：让用户在最后一条输入记录被读取之后发生的动作。<br>几个实例:</li>
+<li>$ awk ‘/^(no|so)/‘ test—–打印所有以模式no或so开头的行。</li>
+<li>$ awk ‘/^[ns]/{print $1}’ test—–如果记录以n或s开头，就打印这个记录。</li>
+<li>$ awk ‘$1 ~/[0-9][0-9]$/(print $1}’ test—–如果第一个域以两个数字结束就打印这个记录。</li>
+<li>$ awk ‘$1 == 100 || $2 &lt; 50’ test—–如果第一个或等于100或者第二个域小于50，则打印该行。</li>
+<li>$ awk ‘$1 != 10’ test—–如果第一个域不等于10就打印该行。</li>
+<li>$ awk ‘/test/{print $1 + 10}’ test—–如果记录包含正则表达式test，则第一个域加10并打印出来。</li>
+<li>$ awk ‘{print ($1 &gt; 5 ? “ok “$1: “error”$1)}’ test—–如果第一个域大于5则打印问号后面的表达式值，否则打印冒号后面的表达式值。</li>
+<li>$ awk ‘/^root/,/^mysql/‘ test—-打印以正则表达式root开头的记录到以正则表达式mysql开头的记录范围内的所有记录。如果找到一个新的正则表达式root开头的记录，则继续打印直到下一个以正则表达式mysql开头的记录为止，或到文件末尾。</li>
+</ul>
+<p>awk内置变量<br>awk有许多内置变量用来设置环境信息，这些变量可以被改变，下面给出了最常用的一些变量。</p>
+<p>ARGC               命令行参数个数<br>ARGV               命令行参数排列<br>ENVIRON            支持队列中系统环境变量的使用<br>FILENAME           awk浏览的文件名<br>FNR                浏览文件的记录数<br>FS                 设置输入域分隔符，等价于命令行 -F选项<br>NF                 浏览记录的域的个数<br>NR                 已读的记录数<br>OFS                输出域分隔符<br>ORS                输出记录分隔符<br>RS                 控制记录分隔符<br>此外,$0变量是指整条记录。$1表示当前行的第一个域,$2表示当前行的第二个域,……以此类推。</p>
+<p>统计/etc/passwd:文件名，每行的行号，每行的列数，对应的完整行内容:</p>
+<figure class="highlight shell"><figcaption><span>script</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">awk  -F <span class="string">&#x27;:&#x27;</span>  <span class="string">&#x27;&#123;print &quot;filename:&quot; FILENAME &quot;,linenumber:&quot; NR &quot;,columns:&quot; NF &quot;,linecontent:&quot;$0&#125;&#x27;</span> /etc/passwd</span></span><br><span class="line">filename:/etc/passwd,linenumber:1,columns:7,linecontent:root:x:0:0:root:/root:/bin/bash</span><br><span class="line">filename:/etc/passwd,linenumber:2,columns:7,linecontent:daemon:x:1:1:daemon:/usr/sbin:/bin/sh</span><br><span class="line">filename:/etc/passwd,linenumber:3,columns:7,linecontent:bin:x:2:2:bin:/bin:/bin/sh</span><br><span class="line">filename:/etc/passwd,linenumber:4,columns:7,linecontent:sys:x:3:3:sys:/dev:/bin/sh</span><br></pre></td></tr></table></figure>
+
+<p>记录、域、域分隔符<br>记录<br>awk把每一个以换行符结束的行称为一个记录。<br>记录分隔符：默认的输入和输出的分隔符都是回车，保存在内建变量ORS和RS中。<br>$0变量：它指的是整条记录。如$ awk ‘{print $0}’ test将输出test文件中的所有记录。<br>变量NR：一个计数器，每处理完一条记录，NR的值就增加1。如$ awk ‘{print NR,$0}’ test将输出test文件中所有记录，并在记录前显示记录号。<br>域<br>记录中每个单词称做”域”，默认情况下以空格或tab分隔。awk可跟踪域的个数，并在内建变量NF中保存该值。如$ awk ‘{print $1,$3}’ test将打印test文件中第一和第三个以空格分开的列(域)。<br>域分隔符<br>内建变量FS保存输入域分隔符的值，默认是空格或tab。我们可以通过-F命令行选项修改FS的值。如$ awk -F: ‘{print $1,$5}’ test将打印以冒号为分隔符的第一，第五列的内容。<br>可以同时使用多个域分隔符，这时应该把分隔符写成放到方括号中，如$awk -F’[:\t]’ ‘{print $1,$3}’ test，表示以空格、冒号和tab作为分隔符。<br>输出域的分隔符默认是一个空格，保存在OFS中。如$ awk -F: ‘{print $1,$5}’ test，$1和$5间的逗号就是OFS的值。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/linux/" rel="tag"># linux</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/08/31/distributed_knowledge/" rel="prev" title="分布式体系知识图谱">
+      <i class="fa fa-chevron-left"></i> 分布式体系知识图谱
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/09/06/two_ball_hundred_floors/" rel="next" title="算法：100层和2个玻璃球">
+      算法：100层和2个玻璃球 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#vim%EF%BC%9A"><span class="nav-text">vim：</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#grep"><span class="nav-text">grep:</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#cat"><span class="nav-text">cat:</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#more"><span class="nav-text">more:</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#less"><span class="nav-text">less:</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#echo"><span class="nav-text">echo:</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#sed%EF%BC%9A"><span class="nav-text">sed：</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%A6%81%E5%A4%84%E7%90%86%E7%9A%84%E5%AD%97%E7%AC%A6%E5%8C%85%E5%90%AB%E5%8D%95%E5%BC%95%E5%8F%B7"><span class="nav-text">要处理的字符包含单引号</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B0%86%E5%88%86%E9%9A%94%E7%AC%A6%E6%8D%A2%E6%88%90%E9%97%AE%E5%8F%B7%E2%80%9D-%E2%80%9D"><span class="nav-text">将分隔符换成问号”?”:</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9B%BF%E6%8D%A2%E6%89%80%E6%9C%89%E5%8C%B9%E9%85%8D%E5%85%B3%E9%94%AE%E5%AD%97"><span class="nav-text">替换所有匹配关键字</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B3%A8%E6%84%8F%E8%BF%99%E9%87%8C%E7%9A%84-%E2%80%9C-amp-%E2%80%9C-%E7%AC%A6%E5%8F%B7%EF%BC%8C%E5%A6%82%E6%9E%9C%E6%B2%A1%E6%9C%89-%E2%80%9C-amp-%E2%80%9D%EF%BC%8C%E5%B0%B1%E4%BC%9A%E7%9B%B4%E6%8E%A5%E5%B0%86%E5%8C%B9%E9%85%8D%E5%88%B0%E7%9A%84%E5%AD%97%E7%AC%A6%E4%B8%B2%E6%9B%BF%E6%8D%A2%E6%8E%89"><span class="nav-text">注意这里的 “ &amp; “ 符号，如果没有 “&amp;”，就会直接将匹配到的字符串替换掉</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9B%BF%E6%8D%A2%E6%96%87%E4%BB%B6%E4%B8%AD%E7%9A%84%E6%89%80%E6%9C%89%E5%8C%B9%E9%85%8D%E9%A1%B9"><span class="nav-text">替换文件中的所有匹配项</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%90%8C%E6%97%B6%E6%89%A7%E8%A1%8C%E4%B8%A4%E4%B8%AA%E6%9B%BF%E6%8D%A2%E8%A7%84%E5%88%99"><span class="nav-text">同时执行两个替换规则</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#awk"><span class="nav-text">awk:</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="AvenChang"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">AvenChang</p>
+  <div class="site-description" itemprop="description">走走写写</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">15</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/alliamchang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;alliamchang" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:aven_chang@qq.com" title="E-Mail → mailto:aven_chang@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">AvenChang</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

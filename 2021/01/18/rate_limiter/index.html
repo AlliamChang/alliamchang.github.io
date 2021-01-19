@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/batman-32x32.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/batman-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/batman-16x16.png">
+  <link rel="mask-icon" href="/images/batman.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Monda:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yoursite.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","width":230,"display":"post","padding":24,"offset":14,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="该文章将介绍几种常见的限流算法，以及如何在分布式下实现限流">
+<meta property="og:type" content="article">
+<meta property="og:title" content="常见的限流算法">
+<meta property="og:url" content="http://yoursite.com/2021/01/18/rate_limiter/index.html">
+<meta property="og:site_name" content="AvenChang&#39;s Blog">
+<meta property="og:description" content="该文章将介绍几种常见的限流算法，以及如何在分布式下实现限流">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://yoursite.com/image/rate_limiter/single_counter.png">
+<meta property="og:image" content="http://yoursite.com/image/rate_limiter/sliding_window.png">
+<meta property="og:image" content="http://yoursite.com/image/rate_limiter/token_bucket.png">
+<meta property="og:image" content="http://yoursite.com/image/rate_limiter/leaky_bucket.png">
+<meta property="og:image" content="http://yoursite.com/image/rate_limiter/big_qps.png">
+<meta property="og:image" content="http://yoursite.com/image/rate_limiter/compare.png">
+<meta property="article:published_time" content="2021-01-18T03:16:00.000Z">
+<meta property="article:modified_time" content="2021-01-19T03:45:26.349Z">
+<meta property="article:author" content="AvenChang">
+<meta property="article:tag" content="分布式">
+<meta property="article:tag" content="service governance">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://yoursite.com/image/rate_limiter/single_counter.png">
+
+<link rel="canonical" href="http://yoursite.com/2021/01/18/rate_limiter/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>常见的限流算法 | AvenChang's Blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">AvenChang's Blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Keep Learning</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/01/18/rate_limiter/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="AvenChang">
+      <meta itemprop="description" content="走走写写">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="AvenChang's Blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          常见的限流算法
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-01-18 11:16:00" itemprop="dateCreated datePublished" datetime="2021-01-18T11:16:00+08:00">2021-01-18</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-01-19 11:45:26" itemprop="dateModified" datetime="2021-01-19T11:45:26+08:00">2021-01-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E6%9C%8D%E5%8A%A1%E6%B2%BB%E7%90%86/" itemprop="url" rel="index"><span itemprop="name">服务治理</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>该文章将介绍几种常见的限流算法，以及如何在分布式下实现限流</p>
+<a id="more"></a>
+<h2 id="常用限流算法"><a href="#常用限流算法" class="headerlink" title="常用限流算法"></a>常用限流算法</h2><h3 id="单机限流器"><a href="#单机限流器" class="headerlink" title="单机限流器"></a>单机限流器</h3><h4 id="计数器"><a href="#计数器" class="headerlink" title="计数器"></a>计数器</h4><p>计数器算法是定义一个计数器在周期内累加访问次数，当达到设定的限流值时，触发限流策略。下一个周期开始时，将计数器清零，重新计数。该算法无论在单机还是在分布式环境下实现都非常简单，分布式环境下使用redis的incr原子自增性和线程安全即可实现。</p>
+<p>对于时间周期较大的情况下，计数器算法会存在临界问题。如图，限流设定为100访问量/分钟，在前一个周期最后5s以及后一个周期前5s分别涌入了100访问量，在各自周期都符合预期，但在这10s内已经达到了200的访问量，远超预期负载能力。</p>
+<p><img src="/image/rate_limiter/single_counter.png" alt="计数器"></p>
+<h4 id="滑动窗口"><a href="#滑动窗口" class="headerlink" title="滑动窗口"></a>滑动窗口</h4><p>滑动窗口算法很好地解决了计数器算法带来的临界问题。该算法将一个时间周期划分成N个更小的周期，分别记录小周期内的访问量，根据时间窗口的滑动，淘汰过期的小周期，生成新的小周期。访问量的计算方法为滑动窗口内所有小周期的访问量总和。若窗口内访问量总和超过了阈值，则触发限流策略。</p>
+<p><img src="/image/rate_limiter/sliding_window.png" alt="滑动窗口"></p>
+<p>在Go中实现一个滑动窗口的结构：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// window maintains a ring of buckets and increments the failure and success</span></span><br><span class="line"><span class="comment">// counts of the current bucket.</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> window <span class="keyword">struct</span> &#123;</span><br><span class="line">   rw      rwlock.RWLock</span><br><span class="line">   oldest  <span class="keyword">int32</span>    <span class="comment">// oldest perPBucket index</span></span><br><span class="line">   latest  <span class="keyword">int32</span>    <span class="comment">// latest perPBucket index</span></span><br><span class="line">   buckets []bucket <span class="comment">// buckets this perPWindow holds</span></span><br><span class="line"></span><br><span class="line">   bucketTime time.Duration <span class="comment">// time each perPBucket holds</span></span><br><span class="line">   bucketNums <span class="keyword">int32</span>         <span class="comment">// the numbe of buckets</span></span><br><span class="line">   inWindow   <span class="keyword">int32</span>         <span class="comment">// the number of buckets in the perPWindow</span></span><br><span class="line">   ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="令牌桶"><a href="#令牌桶" class="headerlink" title="令牌桶"></a>令牌桶</h4><p>令牌桶算法是以恒定的速度(限流值 / 周期)往桶内添加令牌，桶的容量即限流值，桶满了令牌直接丢弃。而每个请求都需要从桶内获取令牌，只有获取到令牌才能执行请求，否则就触发限流策略，拒绝该请求。</p>
+<p><img src="/image/rate_limiter/token_bucket.png" alt="令牌桶"></p>
+<p>在Go中实现一个简单的令牌桶：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// qps_limiter.go</span></span><br><span class="line"><span class="comment">// qpsLimiter implements the RateLimiter interface.</span></span><br><span class="line"><span class="keyword">type</span> qpsLimiter <span class="keyword">struct</span> &#123;</span><br><span class="line">   limit    <span class="keyword">int32</span></span><br><span class="line">   tokens   <span class="keyword">int32</span></span><br><span class="line">   interval time.Duration</span><br><span class="line">   once     <span class="keyword">int32</span></span><br><span class="line">   ticker   *time.Ticker</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// Acquire .</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(l *qpsLimiter)</span> <span class="title">Acquire</span><span class="params">()</span> <span class="title">bool</span></span> &#123;</span><br><span class="line">   <span class="keyword">if</span> atomic.LoadInt32(&amp;l.tokens) &lt;= <span class="number">0</span> &#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="literal">false</span></span><br><span class="line">   &#125;</span><br><span class="line">   <span class="keyword">return</span> atomic.AddInt32(&amp;l.tokens, <span class="number">-1</span>) &gt;= <span class="number">0</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 这里允许一些误差，直接Store，可以换来更好的性能，也解决了大并发情况之下CAS不上的问题</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(l *qpsLimiter)</span> <span class="title">updateToken</span><span class="params">()</span></span> &#123;</span><br><span class="line">   <span class="keyword">var</span> v <span class="keyword">int32</span></span><br><span class="line">   v = atomic.LoadInt32(&amp;l.tokens)</span><br><span class="line">   <span class="keyword">if</span> v &lt; <span class="number">0</span> &#123;</span><br><span class="line">      v = atomic.LoadInt32(&amp;l.once)</span><br><span class="line">   &#125; <span class="keyword">else</span> <span class="keyword">if</span> v+atomic.LoadInt32(&amp;l.once) &gt; atomic.LoadInt32(&amp;l.limit) &#123;</span><br><span class="line">      v = atomic.LoadInt32(&amp;l.limit)</span><br><span class="line">   &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      v = v + atomic.LoadInt32(&amp;l.once)</span><br><span class="line">   &#125;</span><br><span class="line">   atomic.StoreInt32(&amp;l.tokens, v)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="漏桶"><a href="#漏桶" class="headerlink" title="漏桶"></a>漏桶</h4><p>漏桶算法则与令牌桶算法相似，所有请求都会加入到一个漏桶，当桶满溢出，请求就会被拒绝。漏桶会以恒定的速率释放请求，请求将被正常执行，直至漏桶为空。</p>
+<p><img src="/image/rate_limiter/leaky_bucket.png" alt="漏桶"></p>
+<h4 id="对比"><a href="#对比" class="headerlink" title="对比"></a>对比</h4><table>
+<thead>
+<tr>
+<th>算法</th>
+<th>参数</th>
+<th>限制突发流量</th>
+<th>平滑限流</th>
+<th>分布式下实现难度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>计数器</td>
+<td>计数周期T周期最大访问值N</td>
+<td>否</td>
+<td>否</td>
+<td>低</td>
+</tr>
+<tr>
+<td>滑动窗口</td>
+<td>窗口长度T窗口划分K窗口内最大访问值N</td>
+<td>是</td>
+<td>窗口内周期划分得越精细，窗口的滑动就越平滑</td>
+<td>中</td>
+</tr>
+<tr>
+<td>令牌桶</td>
+<td>令牌增长速度r令牌桶容量N</td>
+<td>是</td>
+<td>是</td>
+<td>高</td>
+</tr>
+<tr>
+<td>漏桶</td>
+<td>漏桶流出速度r漏桶容量N</td>
+<td>是</td>
+<td>是</td>
+<td>高</td>
+</tr>
+</tbody></table>
+<h3 id="分布式限流器"><a href="#分布式限流器" class="headerlink" title="分布式限流器"></a>分布式限流器</h3><h4 id="分布式精准限流器"><a href="#分布式精准限流器" class="headerlink" title="分布式精准限流器"></a>分布式精准限流器</h4><p>使用Redis Incr接口实现计数器算法，利用该算法实现了简单的分布式精准限流。每个请求进来都需要通过Redis计数器判断是否触发限流。</p>
+<h4 id="分布式大QPS限流器"><a href="#分布式大QPS限流器" class="headerlink" title="分布式大QPS限流器"></a>分布式大QPS限流器</h4><p>该限流器与精准限流器最大的区别是加入了step(步长)的概念，限流接口的令牌数量仍然是在reids中存放着，但是取令牌数量时候不像精准限流器那样一次取一个而是以步长为单位去获取，每次获取单位步长的令牌到本地缓存，新的请求进入需要先去本地的令牌桶中去获取令牌，如果本地令牌桶中消耗完之后需要到redis桶中再次去获取直至redis桶中的令牌被消耗完毕。它比精准限流器在相同的限制数量上减少了去redis请求的次数，相当于依靠远端redis+本地结合的方式可以支持更高的并发大流量的限制。</p>
+<p><img src="/image/rate_limiter/big_qps.png" alt="大QPS"></p>
+<h4 id="分布式大QPS-单机限流"><a href="#分布式大QPS-单机限流" class="headerlink" title="分布式大QPS+单机限流"></a>分布式大QPS+单机限流</h4><p>该方案是结合了分布式限流器以及单机限流器，区别于分布式限流器对redis强依赖，若redis不可用，则整个限流器失效。该方案一般情况下都通过分布式限流器获取token，当出现redis不可用时，降级到单机限流，同时持续探测redis的健康情况，如果恢复健康，则自动切回分布式限流。</p>
+<h4 id="对比-1"><a href="#对比-1" class="headerlink" title="对比"></a>对比</h4><p><img src="/image/rate_limiter/compare.png" alt="对比"></p>
+<h2 id="容量预估"><a href="#容量预估" class="headerlink" title="容量预估"></a>容量预估</h2><p>有一个简单的QPS容量预估方法, 其基本思路为: 当物理资源在安全阈值内时, 其消耗和QPS大致成线性正比关系;</p>
+<p>对于一般的服务, 这里的物理资源主要考虑CPU和内存;</p>
+<p>比如昨天服务低峰QPS为100, CPU使用10%, 高峰QPS为300, CPU使用20%;</p>
+<p>则大致判断每增加200的QPS, CPU使用会增加10%;</p>
+<p>假设以70%的CPU使用为安全阈值;</p>
+<p>从低峰100/10%出发, 到达70%的使用大概能撑1300;</p>
+<p>用同样的方式预估一下内存的情况, 取两者较小值, 作为服务的安全容量上限;</p>
+<p>当然比较准确的是通过压测进行QPS估量</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/" rel="tag"># 分布式</a>
+              <a href="/tags/service-governance/" rel="tag"># service governance</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/09/18/userful_knowledge/" rel="prev" title="学习网址收集">
+      <i class="fa fa-chevron-left"></i> 学习网址收集
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/01/18/monkey_principle/" rel="next" title="Go Monkey的原理">
+      Go Monkey的原理 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B8%B8%E7%94%A8%E9%99%90%E6%B5%81%E7%AE%97%E6%B3%95"><span class="nav-text">常用限流算法</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8D%95%E6%9C%BA%E9%99%90%E6%B5%81%E5%99%A8"><span class="nav-text">单机限流器</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%AE%A1%E6%95%B0%E5%99%A8"><span class="nav-text">计数器</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%BB%91%E5%8A%A8%E7%AA%97%E5%8F%A3"><span class="nav-text">滑动窗口</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BB%A4%E7%89%8C%E6%A1%B6"><span class="nav-text">令牌桶</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%BC%8F%E6%A1%B6"><span class="nav-text">漏桶</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AF%B9%E6%AF%94"><span class="nav-text">对比</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%86%E5%B8%83%E5%BC%8F%E9%99%90%E6%B5%81%E5%99%A8"><span class="nav-text">分布式限流器</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%88%86%E5%B8%83%E5%BC%8F%E7%B2%BE%E5%87%86%E9%99%90%E6%B5%81%E5%99%A8"><span class="nav-text">分布式精准限流器</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%88%86%E5%B8%83%E5%BC%8F%E5%A4%A7QPS%E9%99%90%E6%B5%81%E5%99%A8"><span class="nav-text">分布式大QPS限流器</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%88%86%E5%B8%83%E5%BC%8F%E5%A4%A7QPS-%E5%8D%95%E6%9C%BA%E9%99%90%E6%B5%81"><span class="nav-text">分布式大QPS+单机限流</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AF%B9%E6%AF%94-1"><span class="nav-text">对比</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%B9%E9%87%8F%E9%A2%84%E4%BC%B0"><span class="nav-text">容量预估</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="AvenChang"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">AvenChang</p>
+  <div class="site-description" itemprop="description">走走写写</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">15</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/alliamchang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;alliamchang" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:aven_chang@qq.com" title="E-Mail → mailto:aven_chang@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">AvenChang</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/batman-32x32.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/batman-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/batman-16x16.png">
+  <link rel="mask-icon" href="/images/batman.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Monda:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yoursite.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","width":230,"display":"post","padding":24,"offset":14,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="该文章是对Go的函数动态替换库Monkey的原理分析。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Go Monkey的原理">
+<meta property="og:url" content="http://yoursite.com/2021/01/18/monkey_principle/index.html">
+<meta property="og:site_name" content="AvenChang&#39;s Blog">
+<meta property="og:description" content="该文章是对Go的函数动态替换库Monkey的原理分析。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://yoursite.com/image/monkey_principle/hopper1.png">
+<meta property="og:image" content="http://yoursite.com/image/monkey_principle/hopper2.png">
+<meta property="og:image" content="http://yoursite.com/image/monkey_principle/hopper3.png">
+<meta property="og:image" content="http://yoursite.com/image/monkey_principle/hopper4.png">
+<meta property="og:image" content="http://yoursite.com/image/monkey_principle/hopper5.png">
+<meta property="og:image" content="http://yoursite.com/image/monkey_principle/hopper6.png">
+<meta property="og:image" content="http://yoursite.com/image/monkey_principle/segment.png">
+<meta property="article:published_time" content="2021-01-18T06:17:10.000Z">
+<meta property="article:modified_time" content="2021-01-19T03:45:26.349Z">
+<meta property="article:author" content="AvenChang">
+<meta property="article:tag" content="go">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://yoursite.com/image/monkey_principle/hopper1.png">
+
+<link rel="canonical" href="http://yoursite.com/2021/01/18/monkey_principle/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Go Monkey的原理 | AvenChang's Blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">AvenChang's Blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">Keep Learning</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/01/18/monkey_principle/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="AvenChang">
+      <meta itemprop="description" content="走走写写">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="AvenChang's Blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Go Monkey的原理
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-01-18 14:17:10" itemprop="dateCreated datePublished" datetime="2021-01-18T14:17:10+08:00">2021-01-18</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-01-19 11:45:26" itemprop="dateModified" datetime="2021-01-19T11:45:26+08:00">2021-01-19</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">学习笔记</span></a>
+                </span>
+                  ，
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/Go/" itemprop="url" rel="index"><span itemprop="name">Go</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>该文章是对Go的函数动态替换库<a target="_blank" rel="noopener" href="https://github.com/bouk/monkey">Monkey</a>的原理分析。</p>
+<a id="more"></a>
+<h1 id="Principle"><a href="#Principle" class="headerlink" title="Principle"></a>Principle</h1><h2 id="Disassembled-code"><a href="#Disassembled-code" class="headerlink" title="Disassembled code"></a><em>Disassembled code</em></h2><p>首先，我们写一段简单的代码。使用go build -o编译代码（要设置<code>-gcflags=-l</code>来禁用内联，后续编译均默认带上）</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">a</span><span class="params">()</span> <span class="title">int</span></span> &#123;</span><br><span class="line">   <span class="keyword">return</span> <span class="number">1</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">   <span class="built_in">print</span>(a())</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>将这段代码编译后，以上代码会生成下面的汇编代码。(可使用<a target="_blank" rel="noopener" href="https://hopperapp.com/">Hopper</a> 查看)</p>
+<p><img src="/image/monkey_principle/hopper1.png"></p>
+<p><img src="/image/monkey_principle/hopper2.png"></p>
+<p>可以看到，地址<code>0x105c8e0</code>调用在地址<code>0x105c8a0</code>的main.a函数，main.a函数只是简单地将<code>0x1</code>放到栈上然后返回。地址<code>0x105c8f3</code>到地址<code>0x105c900</code>再将该值传递给runtime.printint。</p>
+<h2 id="How-function-values-work-in-Go"><a href="#How-function-values-work-in-Go" class="headerlink" title="How function values work in Go"></a><em>How function values work in Go</em></h2><p>我们再写一段代码来看看函数对象的值</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">   <span class="string">&quot;fmt&quot;</span></span><br><span class="line">   <span class="string">&quot;unsafe&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">a</span><span class="params">()</span> <span class="title">int</span></span> &#123; <span class="keyword">return</span> <span class="number">1</span> &#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">   f := a</span><br><span class="line">   fmt.Printf(<span class="string">&quot;0x%x\n&quot;</span>, *(*<span class="keyword">uintptr</span>)(unsafe.Pointer(&amp;f)))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><img src="/image/monkey_principle/hopper3.png"></p>
+<p>在第11行，我们将函数a赋值给f，这意味着执行f()将调用a。直接使用unsafe.Pointer读取f的值，运行代码会看到输出为<code>0x10d4ca0</code>，这个与地址<code>0x10a8760</code>并不相同（如上图所示，main.a的地址）</p>
+<p>我们再次反汇编该段代码，可以看到上面的第11行所对应的汇编代码：</p>
+<p><img src="/image/monkey_principle/hopper4.png"></p>
+<p>其引用了一个地址为<code>0x10d4ca0</code>的值，查看该位置，可以看到以下内容：</p>
+<p><img src="/image/monkey_principle/hopper5.png"></p>
+<p>事实上，该地址就是main.a.f所处的位置。拼接图中的地址，我们可以得到<code>0x10a8760</code>，发现这就是main.a的位置。 看来f不是指向函数的指针，而是指向函数指针的指针。 我们对代码再进行一点修改。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">   <span class="string">&quot;fmt&quot;</span></span><br><span class="line">   <span class="string">&quot;unsafe&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">a</span><span class="params">()</span> <span class="title">int</span></span> &#123;</span><br><span class="line">   <span class="keyword">return</span> <span class="number">1</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">   f := a</span><br><span class="line">   fmt.Printf(<span class="string">&quot;0x%x\n&quot;</span>, **(**<span class="keyword">uintptr</span>)(unsafe.Pointer(&amp;f)))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这时候，运行代码，我们就能得到期望的<code>0x10d4ca0</code>。在<a target="_blank" rel="noopener" href="https://github.com/golang/go/blob/e9d9d0befc634f6e9f906b5ef7476fbd7ebd25e3/src/runtime/runtime2.go#L75-L78">这里</a> 我们可以看到Go代码中的实现情况。 Go函数值可以包含额外的信息，以实现闭包以及函数对象。</p>
+<p>现在，来看看调用函数值的工作方式：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">a</span><span class="params">()</span> <span class="title">int</span></span> &#123; <span class="keyword">return</span> <span class="number">1</span> &#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">        f := a</span><br><span class="line">        f()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我们再次反汇编，可以得到下图：</p>
+<p><img src="/image/monkey_principle/hopper6.png"></p>
+<p>main.a.f指向的内容(即main.a的地址)会被加载到rax，然后被调用。 同时，main.a.f的地址也会被加载到rdx中，这里对应的是上文提到的Go代码中的实现，为函数对象和闭包提供可能的额外信息。</p>
+<h2 id="Replacing-a-function-at-runtime"><a href="#Replacing-a-function-at-runtime" class="headerlink" title="Replacing a function at runtime"></a><em>Replacing a function at runtime</em></h2><p>下面的代码中，我们希望程序输出的结果是2</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">a</span><span class="params">()</span> <span class="title">int</span></span> &#123; <span class="keyword">return</span> <span class="number">1</span> &#125;</span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">b</span><span class="params">()</span> <span class="title">int</span></span> &#123; <span class="keyword">return</span> <span class="number">2</span> &#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">        replace(a, b)</span><br><span class="line">        <span class="built_in">print</span>(a())</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>现在我们如何实现替换？我们需要修改函数a跳转到函数b执行，而不是执行自己本身。根据汇编语言，我们需要用以下代码来进行替换，这会把b的函数值加载到rdx中，然后跳转到rdx指向的位置。(旁边的注释即相应生成的机器码)</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">mov rdx, main.b.f ; 48 C7 C2 ?? ?? ?? ?? 后4个byte即main.b.f地址</span><br><span class="line">jmp [rdx] ; FF 22</span><br></pre></td></tr></table></figure>
+
+<p>下面这段就是将该汇编语言写到代码中：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">assembleJump</span><span class="params">(f <span class="keyword">func</span>()</span> <span class="title">int</span>) []<span class="title">byte</span></span> &#123;</span><br><span class="line">  funcVal := *(*<span class="keyword">uintptr</span>)(unsafe.Pointer(&amp;f))</span><br><span class="line">  <span class="keyword">return</span> []<span class="keyword">byte</span>&#123;</span><br><span class="line">    <span class="number">0x48</span>, <span class="number">0xC7</span>, <span class="number">0xC2</span>,</span><br><span class="line">    <span class="keyword">byte</span>(funcval &gt;&gt; <span class="number">0</span>),</span><br><span class="line">    <span class="keyword">byte</span>(funcval &gt;&gt; <span class="number">8</span>),</span><br><span class="line">    <span class="keyword">byte</span>(funcval &gt;&gt; <span class="number">16</span>),</span><br><span class="line">    <span class="keyword">byte</span>(funcval &gt;&gt; <span class="number">24</span>), <span class="comment">// MOV rdx, funcVal</span></span><br><span class="line"></span><br><span class="line">    <span class="number">0xFF</span>, <span class="number">0x22</span>,          <span class="comment">// JMP [rdx]</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我们已经拥有将函数a替换为函数b所需的代码。 下面的代码尝试将机器码直接复制到函数所处的位置。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">        <span class="string">&quot;syscall&quot;</span></span><br><span class="line">        <span class="string">&quot;unsafe&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">a</span><span class="params">()</span> <span class="title">int</span></span> &#123; <span class="keyword">return</span> <span class="number">1</span> &#125;</span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">b</span><span class="params">()</span> <span class="title">int</span></span> &#123; <span class="keyword">return</span> <span class="number">2</span> &#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 直接读取函数的内存块</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">rawMemoryAccess</span><span class="params">(b <span class="keyword">uintptr</span>)</span> []<span class="title">byte</span></span> &#123;</span><br><span class="line">        <span class="keyword">return</span> (*(*[<span class="number">0xFF</span>]<span class="keyword">byte</span>)(unsafe.Pointer(b)))[:]</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">assembleJump</span><span class="params">(f <span class="keyword">func</span>()</span> <span class="title">int</span>) []<span class="title">byte</span></span> &#123;</span><br><span class="line">        funcVal := *(*<span class="keyword">uintptr</span>)(unsafe.Pointer(&amp;f))</span><br><span class="line">        <span class="keyword">return</span> []<span class="keyword">byte</span>&#123;</span><br><span class="line">                <span class="number">0x48</span>, <span class="number">0xC7</span>, <span class="number">0xC2</span>,</span><br><span class="line">                <span class="keyword">byte</span>(funcVal &gt;&gt; <span class="number">0</span>),</span><br><span class="line">                <span class="keyword">byte</span>(funcVal &gt;&gt; <span class="number">8</span>),</span><br><span class="line">                <span class="keyword">byte</span>(funcVal &gt;&gt; <span class="number">16</span>),</span><br><span class="line">                <span class="keyword">byte</span>(funcVal &gt;&gt; <span class="number">24</span>), <span class="comment">// MOV rdx, funcVal</span></span><br><span class="line">                <span class="number">0xFF</span>, <span class="number">0x22</span>,          <span class="comment">// JMP [rdx]</span></span><br><span class="line">        &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">replace</span><span class="params">(orig, replacement <span class="keyword">func</span>()</span> <span class="title">int</span>)</span> &#123;</span><br><span class="line">        bytes := assembleJump(replacement)</span><br><span class="line">        functionLocation := **(**<span class="keyword">uintptr</span>)(unsafe.Pointer(&amp;orig))</span><br><span class="line">        window := rawMemoryAccess(functionLocation)</span><br><span class="line">   </span><br><span class="line">        <span class="built_in">copy</span>(window, bytes)</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">        replace(a, b)</span><br><span class="line">        <span class="built_in">print</span>(a())</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>不过，直接运行代码并没有得到预期结果，反而还导致<a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Segmentation_fault#Writing_to_read-only_memory">segmentation fault</a> 。 这是由于默认情况下加载的二进制文件不可写（如下图所示，__TEXT的默认只有r和x，没有w）（查看segment权限可查阅<a target="_blank" rel="noopener" href="https://www.objc.io/issues/6-build-tools/mach-o-executables/#mach-o">这里</a> ）。</p>
+<p><img src="/image/monkey_principle/segment.png"></p>
+<p>我们可以使用<a target="_blank" rel="noopener" href="https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/mprotect.2.html">mprotect syscall</a> 来禁用此保护。最终我们得到以下的代码。运行这段代码，我们就能将函数a替换为函数b，并成功输出预期的“2”。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">        <span class="string">&quot;syscall&quot;</span></span><br><span class="line">        <span class="string">&quot;unsafe&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">a</span><span class="params">()</span> <span class="title">int</span></span> &#123; <span class="keyword">return</span> <span class="number">1</span> &#125;</span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">b</span><span class="params">()</span> <span class="title">int</span></span> &#123; <span class="keyword">return</span> <span class="number">2</span> &#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 获取函数所在的内存页</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">getPage</span><span class="params">(p <span class="keyword">uintptr</span>)</span> []<span class="title">byte</span></span> &#123;</span><br><span class="line">        <span class="keyword">return</span> (*(*[<span class="number">0xFFFFFF</span>]<span class="keyword">byte</span>)(unsafe.Pointer(p &amp; ^<span class="keyword">uintptr</span>(syscall.Getpagesize()<span class="number">-1</span>))))[:syscall.Getpagesize()]</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 获取函数的内存块</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">rawMemoryAccess</span><span class="params">(b <span class="keyword">uintptr</span>)</span> []<span class="title">byte</span></span> &#123;</span><br><span class="line">        <span class="keyword">return</span> (*(*[<span class="number">0xFF</span>]<span class="keyword">byte</span>)(unsafe.Pointer(b)))[:]</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">assembleJump</span><span class="params">(f <span class="keyword">func</span>()</span> <span class="title">int</span>) []<span class="title">byte</span></span> &#123;</span><br><span class="line">        funcVal := *(*<span class="keyword">uintptr</span>)(unsafe.Pointer(&amp;f))</span><br><span class="line">        <span class="keyword">return</span> []<span class="keyword">byte</span>&#123;</span><br><span class="line">                <span class="number">0x48</span>, <span class="number">0xC7</span>, <span class="number">0xC2</span>,</span><br><span class="line">                <span class="keyword">byte</span>(funcVal &gt;&gt; <span class="number">0</span>),</span><br><span class="line">                <span class="keyword">byte</span>(funcVal &gt;&gt; <span class="number">8</span>),</span><br><span class="line">                <span class="keyword">byte</span>(funcVal &gt;&gt; <span class="number">16</span>),</span><br><span class="line">                <span class="keyword">byte</span>(funcVal &gt;&gt; <span class="number">24</span>), <span class="comment">// MOV rdx, funcVal</span></span><br><span class="line">                <span class="number">0xFF</span>, <span class="number">0x22</span>,          <span class="comment">// JMP rdx</span></span><br><span class="line">        &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">replace</span><span class="params">(orig, replacement <span class="keyword">func</span>()</span> <span class="title">int</span>)</span> &#123;</span><br><span class="line">        bytes := assembleJump(replacement)</span><br><span class="line">        functionLocation := **(**<span class="keyword">uintptr</span>)(unsafe.Pointer(&amp;orig))</span><br><span class="line">        window := rawMemoryAccess(functionLocation)</span><br><span class="line">       </span><br><span class="line">        page := getPage(functionLocation)</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 修改内存页的权限</span></span><br><span class="line">        syscall.Mprotect(page, syscall.PROT_READ|syscall.PROT_WRITE|syscall.PROT_EXEC)</span><br><span class="line">      </span><br><span class="line">        <span class="built_in">copy</span>(window, bytes)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">        replace(a, b)</span><br><span class="line">        <span class="built_in">print</span>(a())</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="Wrapping-it-up-in-a-library"><a href="#Wrapping-it-up-in-a-library" class="headerlink" title="Wrapping it up in a library"></a><em>Wrapping it up in a library</em></h2><p>以上就是如何在运行时替换函数的原理。根据该原理，就可以封装成一个库函数，提供开发者使用。</p>
+<p><a target="_blank" rel="noopener" href="https://github.com/bouk/monkey">Monkey</a> 就是其中的一个。</p>
+<h1 id="Permission-Denied"><a href="#Permission-Denied" class="headerlink" title="Permission Denied"></a>Permission Denied</h1><p>理论上，可以通过<code>-segprot \__TEXT rwx rx</code>设置max_prot来解决此问题。但从Catalina版本开始，max_prot会被忽略，而max_prot的值会被重置成init_prot，这导致了我们无法直接修改内存。(上下文查看<a target="_blank" rel="noopener" href="https://github.com/apple-opensource/ld64/blob/fd3feabb0a1eb18ab5d7910f3c3a5eed99cef6ab/src/ld/Options.cpp#L374-L379">here</a>)</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">uint32_t</span> <span class="title">Options::initialSegProtection</span><span class="params">(<span class="keyword">const</span> <span class="keyword">char</span>* segName)</span> <span class="keyword">const</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">        ......</span><br><span class="line">        <span class="keyword">if</span> ( <span class="built_in">strcmp</span>(segName, <span class="string">&quot;__TEXT&quot;</span>) == <span class="number">0</span> ) &#123;</span><br><span class="line">                <span class="keyword">return</span> ( fUseTextExecSegment ? VM_PROT_READ : (VM_PROT_READ | VM_PROT_EXECUTE) );</span><br><span class="line">        &#125;</span><br><span class="line">        ......</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">uint32_t</span> <span class="title">Options::maxSegProtection</span><span class="params">(<span class="keyword">const</span> <span class="keyword">char</span>* segName)</span> <span class="keyword">const</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">        <span class="comment">// i386 uses text-relocations so, need max prot to be rwx.  All others have max==init</span></span><br><span class="line">        <span class="keyword">if</span> ( fArchitecture != CPU_TYPE_I386 )</span><br><span class="line">                <span class="keyword">return</span> initialSegProtection(segName);</span><br><span class="line">       </span><br><span class="line">        ......</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h1 id="Possible-Solving"><a href="#Possible-Solving" class="headerlink" title="Possible Solving"></a>Possible Solving</h1><p>在尝试mprotect失败后，再尝试<a target="_blank" rel="noopener" href="https://www.gnu.org/software/hurd/gnumach-doc/Memory-Attributes.html">vm_protect</a></p>
+<blockquote>
+<p>The function vm_protect sets the virtual memory access privileges for a range of allocated addresses in target_task’s virtual address space. The protection argument describes a combination of read, write, and execute accesses that should be <em>permitted</em>.</p>
+</blockquote>
+<h1 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h1><p><strong>[1]</strong> <a target="_blank" rel="noopener" href="https://bou.ke/blog/monkey-patching-in-go/">Monkey Patching in Go</a></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/go/" rel="tag"># go</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/01/18/rate_limiter/" rel="prev" title="常见的限流算法">
+      <i class="fa fa-chevron-left"></i> 常见的限流算法
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/01/18/go_cache/" rel="next" title="Go开源缓存库分析">
+      Go开源缓存库分析 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Principle"><span class="nav-text">Principle</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Disassembled-code"><span class="nav-text">Disassembled code</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#How-function-values-work-in-Go"><span class="nav-text">How function values work in Go</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Replacing-a-function-at-runtime"><span class="nav-text">Replacing a function at runtime</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Wrapping-it-up-in-a-library"><span class="nav-text">Wrapping it up in a library</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Permission-Denied"><span class="nav-text">Permission Denied</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Possible-Solving"><span class="nav-text">Possible Solving</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Reference"><span class="nav-text">Reference</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="AvenChang"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">AvenChang</p>
+  <div class="site-description" itemprop="description">走走写写</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">15</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/alliamchang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;alliamchang" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:aven_chang@qq.com" title="E-Mail → mailto:aven_chang@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">AvenChang</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

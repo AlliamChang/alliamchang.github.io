@@ -1,1 +1,0 @@
-sed "s/{{ date }}/$(date +"%Y-%m-%d %H:%M:%S")/g" ./scaffolds/post.md >> ./source/_posts/$1.md
