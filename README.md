@@ -1,4 +1,4 @@
-## 轻量写博
+## 轻量写博 
 ```shell
 wget --no-check-certificate https://raw.githubusercontent.com/AlliamChang/alliamchang.github.io/blog/initial.sh && chmod +x intial.sh && ./intial.sh
 (mac)$ curl 'https://raw.githubusercontent.com/AlliamChang/alliamchang.github.io/blog/initial.sh' > initial.sh
