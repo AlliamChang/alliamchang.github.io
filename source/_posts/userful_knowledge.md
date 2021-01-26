@@ -16,9 +16,13 @@ https://snailclimb.gitee.io/javaguide/#/
 ## 拓展
 支付系统：https://dbaplus.cn/news-159-3243-1.html
 Big Ball of Mud：http://www.laputan.org/mud/
+intellij：https://resources.jetbrains.com/storage/products/intellij-idea/docs/IntelliJIDEA_ReferenceCard.pdf
 
 ## Http
 内容协商：https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Content_negotiation
+
+## Git
+learn：https://learngitbranching.js.org/?demo=&locale=zh_CN
 
 ## Java
 String类为什么是final的：https://www.jianshu.com/p/9c7f5daac283
@@ -33,6 +37,7 @@ effective-go：https://go-zh.org/doc/effective_go.html
 the way to go：https://github.com/unknwon/the-way-to-go_ZH_CN/blob/master/eBook/directory.md
 go benchmark：https://blog.csdn.net/weixin_34232617/article/details/91854391
 http server：https://juejin.cn/post/6844903998869209095
+ORM框架：https://geektutu.com/post/geeorm.html
 
 ## MySQL
 MVCC：https://blog.csdn.net/w2064004678/article/details/83012387
